@@ -1,5 +1,5 @@
 from machine import Pin, I2C
-from utime import sleep_ms
+import time
 from mpu6050 import MPU6050
 from lib.fusion import Fusion
 from lib.umqtt import MQTTClient
@@ -8,29 +8,34 @@ import network
 
 from config import wifi_ssid, wifi_password, mqtt_broker, mqtt_username, mqtt_password
 
-wlan = network.WLAN(network.STA_IF)
-wlan.active(True)
-wlan.connect(wifi_ssid, wifi_password)
-connection_timeout = 10
-while connection_timeout > 0:
-    if wlan.status() >= 3:
-        break
-    connection_timeout -= 1
-    print("Waiting for wifi connection...")
-    sleep_ms(1000)
-
-if wlan.status() != 3:
-    print("Failed to connect to WiFi")
+def connect_wifi(ssid, password, timeout=10):
+    wlan = network.WLAN(network.STA_IF)
+    wlan.active(True)
+    wlan.connect(ssid, password)
+    
+    print(f"Connecting to {ssid}...")
+    for i in range(timeout):
+        if wlan.status() == 3:
+            print("Connected to WiFi!")
+            print("IP address:", wlan.ifconfig()[0])
+            return wlan
+        else:
+            print(f"Waiting ({i + 1}/{timeout})...")
+            time.sleep(1)
+    
+    print("Connection failed with status:", wlan.status())
     raise RuntimeError("WiFi connection failed")
-else:
-    print("Connected to WiFi")
-    print(f"IP Address: {wlan.ifconfig()[0]}")
+
+# Use it
+wlan = connect_wifi(wifi_ssid, wifi_password)
     
 
 try:
+    print("HERE1")
     mqtt = MQTTClient("HAND_GESTURE", mqtt_broker, 8883, mqtt_username, mqtt_password, ssl=True, ssl_params={"server_hostname": mqtt_broker})
-
+    print("HERE2")
     mqtt.connect()
+    print("HERE3")
 except Exception as e:
     print(f"Failed to connect to MQTT broker: {e}")
     raise
@@ -113,4 +118,4 @@ while True:
         direction = "STOP"
 
     mqtt.publish("gesture/direction", direction)
-    sleep_ms(5)
+    time.sleep_ms(50)
