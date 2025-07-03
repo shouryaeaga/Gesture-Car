@@ -1,6 +1,7 @@
 from machine import Pin, I2C
 from utime import sleep_ms
 from mpu6050 import MPU6050
+from fusion import Fusion
 scl = Pin(21)
 sda = Pin(20)
 
@@ -27,12 +28,13 @@ gys = []
 gzs = []
 count = 0
 
+fusion = Fusion()
+
+direction = "STOP"
+
 while True:
     raw_ax, raw_ay, raw_az = mpu.read_accelerometer()
     raw_gx, raw_gy, raw_gz = mpu.read_gyroscope()
-
-    print(f"Accelerometer: ax={raw_ax:.2f} m/s^2, ay={raw_ay:.2f} m/s^2, az={raw_az:.2f} m/s^2")
-    print(f"Gyroscope: gx={raw_gx:.2f} deg/s, gy={raw_gy:.2f} deg/s, gz={raw_gz:.2f} deg/s")
 
     # CALIBRATION SCRIPT
     # axs.append(raw_ax)
@@ -60,7 +62,22 @@ while True:
     raw_gx -= offset_GX
     raw_gy -= offset_GY
     raw_gz -= offset_GZ
-    print(f"Calibrated Accelerometer: ax={raw_ax:.2f} m/s^2, ay={raw_ay:.2f} m/s^2, az={raw_az:.2f} m/s^2")
-    print(f"Calibrated Gyroscope: gx={raw_gx:.2f} deg/s, gy={raw_gy:.2f} deg/s, gz={raw_gz:.2f} deg/s")
+
+    fusion.update_nomag((raw_ax, raw_ay, raw_az), (raw_gx, raw_gy, raw_gz))
+
+    # print(f"Heading: {fusion.heading:.2f} degrees, Pitch: {fusion.pitch:.2f} degrees, Roll: {fusion.roll:.2f} degrees")
+
+    if fusion.pitch > 45:
+        direction = "RIGHT"
+    elif fusion.pitch < -45:
+        direction = "LEFT"
+    elif fusion.roll > 90:
+        direction = "UP"
+    elif fusion.roll < -90:
+        direction = "DOWN"
+    else:
+        direction = "STOP"
+
+    
 
     sleep_ms(5)
