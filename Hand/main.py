@@ -1,16 +1,50 @@
 from machine import Pin, I2C
 from utime import sleep_ms
 from mpu6050 import MPU6050
-from fusion import Fusion
-scl = Pin(21)
-sda = Pin(20)
+from lib.fusion import Fusion
+from lib.umqtt import MQTTClient
+import network
 
+
+from config import wifi_ssid, wifi_password, mqtt_broker, mqtt_username, mqtt_password
+
+wlan = network.WLAN(network.STA_IF)
+wlan.active(True)
+wlan.connect(wifi_ssid, wifi_password)
+connection_timeout = 10
+while connection_timeout > 0:
+    if wlan.status() >= 3:
+        break
+    connection_timeout -= 1
+    print("Waiting for wifi connection...")
+    sleep_ms(1000)
+
+if wlan.status() != 3:
+    print("Failed to connect to WiFi")
+    raise RuntimeError("WiFi connection failed")
+else:
+    print("Connected to WiFi")
+    print(f"IP Address: {wlan.ifconfig()[0]}")
+    
+
+try:
+    mqtt = MQTTClient("HAND_GESTURE", mqtt_broker, 8883, mqtt_username, mqtt_password, ssl=True, ssl_params={"server_hostname": mqtt_broker})
+
+    mqtt.connect()
+except Exception as e:
+    print(f"Failed to connect to MQTT broker: {e}")
+    raise
+
+print("Connected to MQTT broker")
 offset_AX = -0.0002
 offset_AY = 0.3302
 offset_AZ = 10.8233 - 9.80665  # Adjusted for gravity
 offset_GX = -3.2302
 offset_GY = 0.4521
 offset_GZ = -0.6837
+
+scl = Pin(21)
+sda = Pin(20)
 
 i2c = I2C(0, scl=scl, sda=sda, freq=400000)
 devices = i2c.scan()
@@ -71,13 +105,12 @@ while True:
         direction = "RIGHT"
     elif fusion.pitch < -45:
         direction = "LEFT"
-    elif fusion.roll > 90:
+    elif fusion.roll > 45:
         direction = "UP"
-    elif fusion.roll < -90:
+    elif fusion.roll < -45:
         direction = "DOWN"
     else:
         direction = "STOP"
 
-    
-
+    mqtt.publish("gesture/direction", direction)
     sleep_ms(5)
