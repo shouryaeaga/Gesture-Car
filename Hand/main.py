@@ -11,6 +11,8 @@ from config import wifi_ssid, wifi_password, mqtt_broker, mqtt_username, mqtt_pa
 def connect_wifi(ssid, password, timeout=10):
     wlan = network.WLAN(network.STA_IF)
     wlan.active(True)
+    while wlan.active() == False:
+        time.sleep_ms(1)  # Wait for the WLAN to be active
     wlan.connect(ssid, password)
     
     print(f"Connecting to {ssid}...")
@@ -32,7 +34,7 @@ wlan = connect_wifi(wifi_ssid, wifi_password)
 
 try:
     print("HERE1")
-    mqtt = MQTTClient("HAND_GESTURE", mqtt_broker, 8883, mqtt_username, mqtt_password, ssl=True, ssl_params={"server_hostname": mqtt_broker})
+    mqtt = MQTTClient("HAND_GESTURE", mqtt_broker, 1883, mqtt_username, mqtt_password, ssl=False)
     print("HERE2")
     mqtt.connect()
     print("HERE3")
