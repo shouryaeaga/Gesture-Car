@@ -36,4 +36,5 @@ Kicad:
 
 #### Car (ESP32 + Motor Driver)
 
-Todo
+Hand-Made
+![Car Controller wiring](assets/car_schematic.jpg)
